@@ -344,14 +344,8 @@ selected_title = st.sidebar.selectbox(
 selected_movie_id = movie_to_id[selected_title]
 selected_movie_info = movies_df[movies_df['movieId'] == selected_movie_id].iloc[0]
 
-# Recommendations number slider
-top_n = st.sidebar.slider(
-    "Batas Rekomendasi:",
-    min_value=4,
-    max_value=16,
-    value=8,
-    step=4
-)
+# Tampilkan semua rekomendasi yang relevan (dibatasi 24 film demi performa pemuatan gambar)
+top_n = 24
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
