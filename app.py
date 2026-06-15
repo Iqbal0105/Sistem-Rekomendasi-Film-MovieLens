@@ -361,7 +361,8 @@ if len(movie_titles) > 0:
     selected_title = st.sidebar.selectbox(
         "Cari judul film:",
         options=movie_titles,
-        index=default_idx
+        index=default_idx,
+        key=f"movie_select_{selected_genre}"
     )
     selected_movie_id = movie_to_id[selected_title]
     selected_movie_info = movies_df[movies_df['movieId'] == selected_movie_id].iloc[0]
