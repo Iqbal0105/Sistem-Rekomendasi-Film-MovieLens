@@ -277,8 +277,14 @@ st.markdown("""
         background: #181818;
         border: 1px solid #2f2f2f;
         border-radius: 8px;
-        padding: 1.2rem;
+        padding: 1rem;
         text-align: center;
+        height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        box-sizing: border-box;
     }
 </style>
 """, unsafe_allow_html=True)
