@@ -2,6 +2,8 @@
 
 Movieflix AI adalah sistem rekomendasi film berbasis Machine Learning yang menggunakan dataset **MovieLens 32M**. Aplikasi ini dirancang dengan antarmuka web interaktif ala **Netflix** yang modern dan dinamis, lengkap dengan gambar poster film asli dan deskripsi sinopsis alur cerita yang diunduh secara real-time dari database **The Movie Database (TMDb)**.
 
+🌐 **Demo Live**: [sistem-rekomendasi-film-movielens.streamlit.app](https://sistem-rekomendasi-film-movielens.streamlit.app)
+
 ---
 
 ## ✨ Fitur Utama
