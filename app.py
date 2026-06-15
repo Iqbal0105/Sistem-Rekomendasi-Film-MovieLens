@@ -429,8 +429,8 @@ else:
 
 # Tabs Navigation
 tab1, tab2, tab3 = st.tabs([
-    "🎯 Rekomendasi Genre Serupa (Content-Based)", 
-    "👥 Rekomendasi Pilihan Penonton (Collaborative)", 
+    "🎯 Rekomendasi Genre Serupa", 
+    "👥 Rekomendasi Pilihan Penonton", 
     "📊 Analitik Dataset"
 ])
 
