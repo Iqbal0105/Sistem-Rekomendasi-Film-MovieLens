@@ -165,6 +165,11 @@ st.markdown("""
         color: #ffffff;
         margin-bottom: 0.3rem;
         line-height: 1.3;
+        height: 3.0rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
     
     .card-meta {
@@ -199,7 +204,7 @@ st.markdown("""
         color: #aaaaaa;
         line-height: 1.4;
         margin-bottom: 0.8rem;
-        flex-grow: 1;
+        height: 3.6rem;
         display: -webkit-box;
         -webkit-line-clamp: 3;
         -webkit-box-orient: vertical;
@@ -208,9 +213,11 @@ st.markdown("""
     
     .card-genres {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 0.3rem;
         margin-top: auto;
+        height: 1.6rem;
+        overflow: hidden;
     }
     
     /* Genre Badges */
