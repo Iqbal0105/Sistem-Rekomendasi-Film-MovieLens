@@ -357,15 +357,19 @@ movie_titles = filtered_df['title'].tolist()
 movie_to_id = dict(zip(filtered_df['title'], filtered_df['movieId']))
 
 if len(movie_titles) > 0:
-    default_idx = movie_titles.index("Toy Story (1995)") if "Toy Story (1995)" in movie_titles else 0
+    options_list = ["Semua"] + movie_titles
     selected_title = st.sidebar.selectbox(
         "Cari judul film:",
-        options=movie_titles,
-        index=default_idx,
+        options=options_list,
+        index=0,
         key=f"movie_select_{selected_genre}"
     )
-    selected_movie_id = movie_to_id[selected_title]
-    selected_movie_info = movies_df[movies_df['movieId'] == selected_movie_id].iloc[0]
+    if selected_title == "Semua":
+        is_browse_mode = True
+    else:
+        is_browse_mode = False
+        selected_movie_id = movie_to_id[selected_title]
+        selected_movie_info = movies_df[movies_df['movieId'] == selected_movie_id].iloc[0]
 else:
     st.sidebar.warning("Tidak ada film di genre ini.")
     st.stop()
@@ -380,45 +384,48 @@ st.sidebar.markdown("---")
 st.markdown("<div class='brand-logo'>Movieflix</div>", unsafe_allow_html=True)
 st.markdown("<div class='brand-sub'>Sistem rekomendasi film cerdas dengan citra poster dan sinopsis sinematik</div>", unsafe_allow_html=True)
 
-# Fetch Selected Movie Poster & Description
-with st.spinner("Mengunduh poster film terpilih..."):
-    selected_poster, selected_desc = get_movie_details_cached(selected_movie_info['tmdbId'])
+if not is_browse_mode:
+    # Fetch Selected Movie Poster & Description
+    with st.spinner("Mengunduh poster film terpilih..."):
+        selected_poster, selected_desc = get_movie_details_cached(selected_movie_info['tmdbId'])
 
-# Render Cinema Hero Banner (Netflix Style)
-is_in_cf = selected_movie_id in item_sim_df.index
-cf_status_text = "POPULER DI USER" if is_in_cf else "KLASIK/INDIE"
-selected_stars = "".join(["★" for _ in range(int(round(selected_movie_info['avg_rating'])))]) + "".join(["☆" for _ in range(5 - int(round(selected_movie_info['avg_rating'])))])
+    # Render Cinema Hero Banner (Netflix Style)
+    is_in_cf = selected_movie_id in item_sim_df.index
+    cf_status_text = "POPULER DI USER" if is_in_cf else "KLASIK/INDIE"
+    selected_stars = "".join(["★" for _ in range(int(round(selected_movie_info['avg_rating'])))]) + "".join(["☆" for _ in range(5 - int(round(selected_movie_info['avg_rating'])))])
 
-st.markdown("### 🎬 Film Terpilih")
-col_hero_p, col_hero_d = st.columns([1, 4])
-with col_hero_p:
-    st.markdown(f"""
-    <div class='hero-poster-container'>
-        <img src='{selected_poster}' style='width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block;'>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col_hero_d:
-    selected_genres = selected_movie_info['genres'].split('|')
-    genre_badges = "".join([f"<span class='genre-badge'>{g}</span>" for g in selected_genres])
-    
-    st.markdown(f"""
-    <div class='hero-banner'>
-        <div class='hero-title'>{selected_movie_info['title']}</div>
-        <div class='hero-meta'>
-            <span class='hero-year'>{selected_movie_info['year'] if selected_movie_info['year'] > 0 else 'N/A'}</span>
-            <span style='color: #fbbf24; font-weight: bold;'>{selected_stars} {selected_movie_info['avg_rating']:.2f}/5.0</span>
-            <span style='color: #888;'>({int(selected_movie_info['num_ratings']):,} voting)</span>
-            <span class='hero-match'>98% Cocok</span>
-            <span class='hero-cf-badge'>{cf_status_text}</span>
+    st.markdown("### 🎬 Film Terpilih")
+    col_hero_p, col_hero_d = st.columns([1, 4])
+    with col_hero_p:
+        st.markdown(f"""
+        <div class='hero-poster-container'>
+            <img src='{selected_poster}' style='width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block;'>
         </div>
-        <div class='hero-desc'>{selected_desc}</div>
-        <div style='margin-top: 1rem;'>
-            <span style='color: #999; font-size: 0.9rem; font-weight: bold; margin-right: 0.5rem;'>GENRE:</span>
-            {genre_badges}
+        """, unsafe_allow_html=True)
+
+    with col_hero_d:
+        selected_genres = selected_movie_info['genres'].split('|')
+        genre_badges = "".join([f"<span class='genre-badge'>{g}</span>" for g in selected_genres])
+        
+        st.markdown(f"""
+        <div class='hero-banner'>
+            <div class='hero-title'>{selected_movie_info['title']}</div>
+            <div class='hero-meta'>
+                <span class='hero-year'>{selected_movie_info['year'] if selected_movie_info['year'] > 0 else 'N/A'}</span>
+                <span style='color: #fbbf24; font-weight: bold;'>{selected_stars} {selected_movie_info['avg_rating']:.2f}/5.0</span>
+                <span style='color: #888;'>({int(selected_movie_info['num_ratings']):,} voting)</span>
+                <span class='hero-match'>98% Cocok</span>
+                <span class='hero-cf-badge'>{cf_status_text}</span>
+            </div>
+            <div class='hero-desc'>{selected_desc}</div>
+            <div style='margin-top: 1rem;'>
+                <span style='color: #999; font-size: 0.9rem; font-weight: bold; margin-right: 0.5rem;'>GENRE:</span>
+                {genre_badges}
+            </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+else:
+    st.markdown(f"### 🎬 Kategori Film: {selected_genre}")
 
 # Tabs Navigation
 tab1, tab2, tab3 = st.tabs([
@@ -429,84 +436,119 @@ tab1, tab2, tab3 = st.tabs([
 
 # ----------------- TAB 1: CONTENT-BASED FILTERING -----------------
 with tab1:
-    st.markdown("<h3 style='margin-bottom: 0.2rem;'>Karena Anda Menonton " + selected_movie_info['title'] + "</h3>", unsafe_allow_html=True)
-    st.write("Rekomendasi genre sejenis berdasarkan kemiripan representasi teks TF-IDF.")
-    
-    with st.spinner("Menghitung rekomendasi genre..."):
-        recs_content = recommender.recommend_by_content(selected_movie_id, movies_df, tfidf_matrix, top_n)
+    if is_browse_mode:
+        st.markdown(f"#### Jelajahi Semua Film Terpopuler - {selected_genre}")
+        st.write(f"Daftar film paling populer di genre **{selected_genre}** berdasarkan jumlah rating terbanyak dari penonton.")
         
-    if recs_content.empty:
-        st.info("Tidak ada rekomendasi content-based yang ditemukan.")
-    else:
-        # Fetch posters/descriptions concurrently
-        with st.spinner("Mengunduh poster film rekomendasi..."):
-            recs_details = load_details_in_parallel(recs_content)
-            
-        # Display as a Netflix Grid (4 columns)
-        cols = st.columns(4)
-        for i, row in enumerate(recs_content.itertuples()):
-            col_target = cols[i % 4]
-            poster_url, description = recs_details[i]
-            
-            # Format rating stars
-            item_stars = "".join(["★" for _ in range(int(round(row.avg_rating)))]) + "".join(["☆" for _ in range(5 - int(round(row.avg_rating)))])
-            match_pct = int(row.similarity * 100)
-            
-            item_genres = row.genres.split('|')[:3] # Show max 3 genres on card
-            genres_html = "".join([f"<span class='genre-badge'>{g}</span>" for g in item_genres])
-            
-            with col_target:
-                st.markdown(f"""
-                <div class='movie-card'>
-                    <div class='movie-card-img-container'>
-                        <img class='movie-card-img' src='{poster_url}'>
-                    </div>
-                    <div class='movie-card-content'>
-                        <div class='card-title'>{row.title}</div>
-                        <div class='card-meta'>
-                            <span class='card-match'>{match_pct}% Match</span>
-                            <span class='card-year'>{row.year if row.year > 0 else 'N/A'}</span>
-                        </div>
-                        <div class='card-rating-row'>
-                            {item_stars} <span style='color: #cbd5e1; font-weight: bold;'>{row.avg_rating:.1f}</span>
-                            <span style='color: #777; font-size: 0.75rem;'>({int(row.num_ratings):,})</span>
-                        </div>
-                        <div class='card-desc'>{description}</div>
-                        <div class='card-genres'>{genres_html}</div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-# ----------------- TAB 2: COLLABORATIVE FILTERING -----------------
-with tab2:
-    st.markdown("<h3 style='margin-bottom: 0.2rem;'>Rekomendasi Lain yang Mungkin Anda Sukai</h3>", unsafe_allow_html=True)
-    st.write("Saran film berdasarkan pola kesamaan rating dari pengguna lain di database MovieLens.")
-    
-    if not is_in_cf:
-        st.warning("""
-        ⚠️ **Film ini belum populer di database kami.**
+        # Get top 24 movies in this genre sorted by num_ratings descending
+        browse_movies = filtered_df.sort_values(by='num_ratings', ascending=False).head(top_n)
         
-        Sistem Collaborative Filtering kami memerlukan minimal 4.000 rating untuk memproses rekomendasi yang akurat.
-        Silakan beralih ke tab **Rekomendasi Genre Serupa** atau pilih film populer (seperti Toy Story, Inception, Pulp Fiction, dll) untuk melihat hasil collaborative.
-        """)
-    else:
-        with st.spinner("Mencari kecocokan pola rating..."):
-            recs_collab = recommender.recommend_by_collaborative(selected_movie_id, item_sim_df, movies_df, top_n)
-            
-        if recs_collab.empty:
-            st.info("Tidak ada rekomendasi collaborative yang ditemukan.")
+        if browse_movies.empty:
+            st.info("Tidak ada film yang ditemukan untuk kategori ini.")
         else:
-            with st.spinner("Mengunduh poster film rekomendasi..."):
-                recs_details = load_details_in_parallel(recs_collab)
+            with st.spinner("Mengunduh poster film..."):
+                browse_details = load_details_in_parallel(browse_movies)
                 
             cols = st.columns(4)
-            for i, row in enumerate(recs_collab.itertuples()):
+            for i, row in enumerate(browse_movies.itertuples()):
+                col_target = cols[i % 4]
+                poster_url, description = browse_details[i]
+                
+                item_stars = "".join(["★" for _ in range(int(round(row.avg_rating)))]) + "".join(["☆" for _ in range(5 - int(round(row.avg_rating)))])
+                item_genres = row.genres.split('|')[:3]
+                genres_html = "".join([f"<span class='genre-badge'>{g}</span>" for g in item_genres])
+                
+                with col_target:
+                    st.markdown(f"""
+                    <div class='movie-card'>
+                        <div class='movie-card-img-container'>
+                            <img class='movie-card-img' src='{poster_url}'>
+                        </div>
+                        <div class='movie-card-content'>
+                            <div class='card-title'>{row.title}</div>
+                            <div class='card-meta'>
+                                <span style='color: #E50914; font-weight: bold; font-size: 0.85rem;'>TRENDING</span>
+                                <span class='card-year'>{row.year if row.year > 0 else 'N/A'}</span>
+                            </div>
+                            <div class='card-rating-row'>
+                                {item_stars} <span style='color: #cbd5e1; font-weight: bold;'>{row.avg_rating:.1f}</span>
+                                <span style='color: #777; font-size: 0.75rem;'>({int(row.num_ratings):,})</span>
+                            </div>
+                            <div class='card-desc'>{description}</div>
+                            <div class='card-genres'>{genres_html}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+    else:
+        st.markdown("<h3 style='margin-bottom: 0.2rem;'>Karena Anda Menonton " + selected_movie_info['title'] + "</h3>", unsafe_allow_html=True)
+        st.write("Rekomendasi genre sejenis berdasarkan kemiripan representasi teks TF-IDF.")
+        
+        with st.spinner("Menghitung rekomendasi genre..."):
+            recs_content = recommender.recommend_by_content(selected_movie_id, movies_df, tfidf_matrix, top_n)
+            
+        if recs_content.empty:
+            st.info("Tidak ada rekomendasi content-based yang ditemukan.")
+        else:
+            # Fetch posters/descriptions concurrently
+            with st.spinner("Mengunduh poster film rekomendasi..."):
+                recs_details = load_details_in_parallel(recs_content)
+                
+            # Display as a Netflix Grid (4 columns)
+            cols = st.columns(4)
+            for i, row in enumerate(recs_content.itertuples()):
                 col_target = cols[i % 4]
                 poster_url, description = recs_details[i]
                 
                 # Format rating stars
                 item_stars = "".join(["★" for _ in range(int(round(row.avg_rating)))]) + "".join(["☆" for _ in range(5 - int(round(row.avg_rating)))])
                 match_pct = int(row.similarity * 100)
+                
+                item_genres = row.genres.split('|')[:3] # Show max 3 genres on card
+                genres_html = "".join([f"<span class='genre-badge'>{g}</span>" for g in item_genres])
+                
+                with col_target:
+                    st.markdown(f"""
+                    <div class='movie-card'>
+                        <div class='movie-card-img-container'>
+                            <img class='movie-card-img' src='{poster_url}'>
+                        </div>
+                        <div class='movie-card-content'>
+                            <div class='card-title'>{row.title}</div>
+                            <div class='card-meta'>
+                                <span class='card-match'>{match_pct}% Match</span>
+                                <span class='card-year'>{row.year if row.year > 0 else 'N/A'}</span>
+                            </div>
+                            <div class='card-rating-row'>
+                                {item_stars} <span style='color: #cbd5e1; font-weight: bold;'>{row.avg_rating:.1f}</span>
+                                <span style='color: #777; font-size: 0.75rem;'>({int(row.num_ratings):,})</span>
+                            </div>
+                            <div class='card-desc'>{description}</div>
+                            <div class='card-genres'>{genres_html}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+# ----------------- TAB 2: COLLABORATIVE FILTERING -----------------
+with tab2:
+    if is_browse_mode:
+        st.markdown("#### Film Terpopuler Sepanjang Masa (Semua Kategori)")
+        st.write("Saran film paling populer dan memiliki ulasan terbanyak dari seluruh kategori/genre di database MovieLens.")
+        
+        # Get overall top 24 movies sorted by num_ratings descending
+        browse_overall = movies_df.sort_values(by='num_ratings', ascending=False).head(top_n)
+        
+        if browse_overall.empty:
+            st.info("Tidak ada film terpopuler yang ditemukan.")
+        else:
+            with st.spinner("Mengunduh poster film terpopuler..."):
+                browse_details_overall = load_details_in_parallel(browse_overall)
+                
+            cols = st.columns(4)
+            for i, row in enumerate(browse_overall.itertuples()):
+                col_target = cols[i % 4]
+                poster_url, description = browse_details_overall[i]
+                
+                item_stars = "".join(["★" for _ in range(int(round(row.avg_rating)))]) + "".join(["☆" for _ in range(5 - int(round(row.avg_rating)))])
                 
                 item_genres = row.genres.split('|')[:3]
                 genres_html = "".join([f"<span class='genre-badge'>{g}</span>" for g in item_genres])
@@ -520,7 +562,7 @@ with tab2:
                         <div class='movie-card-content'>
                             <div class='card-title'>{row.title}</div>
                             <div class='card-meta'>
-                                <span class='card-match'>{match_pct}% Cocok</span>
+                                <span style='color: #46d369; font-weight: bold; font-size: 0.85rem;'>TRENDING GLOBAL</span>
                                 <span class='card-year'>{row.year if row.year > 0 else 'N/A'}</span>
                             </div>
                             <div class='card-rating-row'>
@@ -532,6 +574,60 @@ with tab2:
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
+    else:
+        st.markdown("<h3 style='margin-bottom: 0.2rem;'>Rekomendasi Lain yang Mungkin Anda Sukai</h3>", unsafe_allow_html=True)
+        st.write("Saran film berdasarkan pola kesamaan rating dari pengguna lain di database MovieLens.")
+        
+        if not is_in_cf:
+            st.warning("""
+            ⚠️ **Film ini belum populer di database kami.**
+            
+            Sistem Collaborative Filtering kami memerlukan minimal 4.000 rating untuk memproses rekomendasi yang akurat.
+            Silakan beralih ke tab **Rekomendasi Genre Serupa** atau pilih film populer (seperti Toy Story, Inception, Pulp Fiction, dll) untuk melihat hasil collaborative.
+            """)
+        else:
+            with st.spinner("Mencari kecocokan pola rating..."):
+                recs_collab = recommender.recommend_by_collaborative(selected_movie_id, item_sim_df, movies_df, top_n)
+                
+            if recs_collab.empty:
+                st.info("Tidak ada rekomendasi collaborative yang ditemukan.")
+            else:
+                with st.spinner("Mengunduh poster film rekomendasi..."):
+                    recs_details = load_details_in_parallel(recs_collab)
+                    
+                cols = st.columns(4)
+                for i, row in enumerate(recs_collab.itertuples()):
+                    col_target = cols[i % 4]
+                    poster_url, description = recs_details[i]
+                    
+                    # Format rating stars
+                    item_stars = "".join(["★" for _ in range(int(round(row.avg_rating)))]) + "".join(["☆" for _ in range(5 - int(round(row.avg_rating)))])
+                    match_pct = int(row.similarity * 100)
+                    
+                    item_genres = row.genres.split('|')[:3]
+                    genres_html = "".join([f"<span class='genre-badge'>{g}</span>" for g in item_genres])
+                    
+                    with col_target:
+                        st.markdown(f"""
+                        <div class='movie-card'>
+                            <div class='movie-card-img-container'>
+                                <img class='movie-card-img' src='{poster_url}'>
+                            </div>
+                            <div class='movie-card-content'>
+                                <div class='card-title'>{row.title}</div>
+                                <div class='card-meta'>
+                                    <span class='card-match'>{match_pct}% Cocok</span>
+                                    <span class='card-year'>{row.year if row.year > 0 else 'N/A'}</span>
+                                </div>
+                                <div class='card-rating-row'>
+                                    {item_stars} <span style='color: #cbd5e1; font-weight: bold;'>{row.avg_rating:.1f}</span>
+                                    <span style='color: #777; font-size: 0.75rem;'>({int(row.num_ratings):,})</span>
+                                </div>
+                                <div class='card-desc'>{description}</div>
+                                <div class='card-genres'>{genres_html}</div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
 
 # ----------------- TAB 3: STATS & INSIGHTS -----------------
 with tab3:
