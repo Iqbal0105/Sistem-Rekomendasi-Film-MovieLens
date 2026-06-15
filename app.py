@@ -476,37 +476,13 @@ if not is_browse_mode:
         imdb_id_val = selected_movie_info.get('imdbId') if 'imdbId' in selected_movie_info else None
         imdb_url = f"https://www.imdb.com/title/tt{int(imdb_id_val):07d}/" if imdb_id_val is not None and not pd.isna(imdb_id_val) else None
         
-        buttons_html = f"""
-        <div style='display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 1.5rem;'>
-            <a href="{google_watch_url}" target="_blank" style="text-decoration: none;">
-                <button style="background-color: #E50914; color: white; border: none; padding: 0.6rem 1.2rem; font-size: 0.95rem; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background-color 0.2s;">
-                    🔴 Nonton Sekarang (Google)
-                </button>
-            </a>
-            <a href="{youtube_trailer_url}" target="_blank" style="text-decoration: none;">
-                <button style="background-color: #2f2f2f; color: white; border: 1px solid #444; padding: 0.6rem 1.2rem; font-size: 0.95rem; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background-color 0.2s;">
-                    📺 Trailer (YouTube)
-                </button>
-            </a>
-        """
+        buttons_html = f"<div style='display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 1.5rem;'><a href='{google_watch_url}' target='_blank' style='text-decoration: none;'><button style='background-color: #E50914; color: white; border: none; padding: 0.6rem 1.2rem; font-size: 0.95rem; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background-color 0.2s;'>🔴 Nonton Sekarang (Google)</button></a><a href='{youtube_trailer_url}' target='_blank' style='text-decoration: none;'><button style='background-color: #2f2f2f; color: white; border: 1px solid #444; padding: 0.6rem 1.2rem; font-size: 0.95rem; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background-color 0.2s;'>📺 Trailer (YouTube)</button></a>"
         
         if tmdb_url:
-            buttons_html += f"""
-            <a href="{tmdb_url}" target="_blank" style="text-decoration: none;">
-                <button style="background-color: #0d253f; color: #01b4e4; border: 1px solid #01b4e4; padding: 0.6rem 1.2rem; font-size: 0.95rem; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background-color 0.2s;">
-                    🎬 Halaman TMDb
-                </button>
-            </a>
-            """
+            buttons_html += f"<a href='{tmdb_url}' target='_blank' style='text-decoration: none;'><button style='background-color: #0d253f; color: #01b4e4; border: 1px solid #01b4e4; padding: 0.6rem 1.2rem; font-size: 0.95rem; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background-color 0.2s;'>🎬 Halaman TMDb</button></a>"
             
         if imdb_url:
-            buttons_html += f"""
-            <a href="{imdb_url}" target="_blank" style="text-decoration: none;">
-                <button style="background-color: #f5c518; color: black; border: none; padding: 0.6rem 1.2rem; font-size: 0.95rem; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background-color 0.2s;">
-                    ℹ️ Halaman IMDb
-                </button>
-            </a>
-            """
+            buttons_html += f"<a href='{imdb_url}' target='_blank' style='text-decoration: none;'><button style='background-color: #f5c518; color: black; border: none; padding: 0.6rem 1.2rem; font-size: 0.95rem; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background-color 0.2s;'>ℹ️ Halaman IMDb</button></a>"
             
         buttons_html += "</div>"
         
