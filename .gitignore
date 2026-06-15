@@ -1,0 +1,32 @@
+# Dataset files (large files)
+*.csv
+*.txt
+*.zip
+
+# Python cache & compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Model and precomputed data caches
+*.pkl
+*.parquet
+*.h5
+*.model
+
+# IDE configuration
+.vscode/
+.idea/
+.project
+.pydevproject
+.settings/
+.ipynb_checkpoints/
+
+# Streamlit config/state
+.streamlit/
