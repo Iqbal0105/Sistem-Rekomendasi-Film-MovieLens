@@ -337,28 +337,42 @@ with st.spinner("🚀 Memuat database film & konfigurasi sistem..."):
 st.sidebar.markdown("<div style='color: #E50914; font-family: Outfit; font-size: 2rem; font-weight: 900; letter-spacing:-1px; text-transform:uppercase; margin-bottom: 1rem;'>MOVIEFLIX</div>", unsafe_allow_html=True)
 st.sidebar.subheader("Pilih Film Favorit Anda")
 
-# Setup selectbox for movie selection
-movie_titles = movies_df['title'].tolist()
-movie_to_id = dict(zip(movies_df['title'], movies_df['movieId']))
+# Get unique genres list
+all_genres = movies_df['genres'].str.split('|').explode()
+unique_genres = sorted(all_genres[(all_genres != '(no genres listed)') & (all_genres.notna())].unique().tolist())
 
-selected_title = st.sidebar.selectbox(
-    "Cari judul film:",
-    options=movie_titles,
-    index=movie_titles.index("Toy Story (1995)") if "Toy Story (1995)" in movie_titles else 0
+selected_genre = st.sidebar.selectbox(
+    "Filter berdasarkan Genre:",
+    options=["Semua Genre"] + unique_genres
 )
 
-selected_movie_id = movie_to_id[selected_title]
-selected_movie_info = movies_df[movies_df['movieId'] == selected_movie_id].iloc[0]
+# Filter movies based on selected genre
+if selected_genre != "Semua Genre":
+    filtered_df = movies_df[movies_df['genres'].str.contains(selected_genre, case=False, na=False)]
+else:
+    filtered_df = movies_df
+
+# Setup selectbox for movie selection based on filtered list
+movie_titles = filtered_df['title'].tolist()
+movie_to_id = dict(zip(filtered_df['title'], filtered_df['movieId']))
+
+if len(movie_titles) > 0:
+    default_idx = movie_titles.index("Toy Story (1995)") if "Toy Story (1995)" in movie_titles else 0
+    selected_title = st.sidebar.selectbox(
+        "Cari judul film:",
+        options=movie_titles,
+        index=default_idx
+    )
+    selected_movie_id = movie_to_id[selected_title]
+    selected_movie_info = movies_df[movies_df['movieId'] == selected_movie_id].iloc[0]
+else:
+    st.sidebar.warning("Tidak ada film di genre ini.")
+    st.stop()
 
 # Tampilkan semua rekomendasi yang relevan (dibatasi 24 film demi performa pemuatan gambar)
 top_n = 24
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("""
-**Sistem Pencarian:**
-- **Content-Based Row**: Algoritma TF-IDF mencocokkan kemiripan genre film.
-- **Collaborative Row**: Algoritma Item-Based CF merekomendasikan berdasarkan kesamaan riwayat rating user.
-""")
 
 # ----------------- MAIN PAGES & HERO BANNER -----------------
 
