@@ -388,7 +388,8 @@ if selected_movie_id_from_url is not None:
         if target_title in movie_titles:
             default_index = movie_titles.index(target_title) + 1
     else:
-        st.session_state[selectbox_key] = "Semua"
+        if selectbox_key in st.session_state:
+            del st.session_state[selectbox_key]
 
 if len(movie_titles) > 0:
     options_list = ["Semua"] + movie_titles
@@ -449,7 +450,7 @@ if not is_browse_mode:
             st.query_params.clear()
             for k in list(st.session_state.keys()):
                 if k.startswith("movie_select_"):
-                    st.session_state[k] = "Semua"
+                    del st.session_state[k]
             st.rerun()
 
     st.markdown("### 🎬 Detail Film")
