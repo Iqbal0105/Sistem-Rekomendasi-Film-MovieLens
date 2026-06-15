@@ -313,7 +313,7 @@ st.markdown("""
 # ----------------- DATA LOADING & CACHING -----------------
 
 @st.cache_data
-def get_cached_movies():
+def get_cached_movies_v2():
     return recommender.load_movies()
 
 @st.cache_resource
@@ -346,7 +346,7 @@ def load_details_in_parallel(recs_df):
 # Load Core Data
 with st.spinner("🚀 Memuat database film & konfigurasi sistem..."):
     try:
-        movies_df = get_cached_movies()
+        movies_df = get_cached_movies_v2()
         tfidf_matrix = get_cached_content_matrix(movies_df)
         item_sim_df = get_cached_collaborative_matrix()
     except Exception as e:
@@ -465,12 +465,16 @@ if not is_browse_mode:
         selected_genres = selected_movie_info['genres'].split('|')
         genre_badges = "".join([f"<span class='genre-badge'>{g}</span>" for g in selected_genres])
         
-        # Build watch and detail links
+        # Build watch and detail links safely to avoid KeyError on stale caches
         clean_title = selected_movie_info['title'].split(' (')[0]
         google_watch_url = f"https://www.google.com/search?q=Nonton+{clean_title.replace(' ', '+')}+sub+Indo"
         youtube_trailer_url = f"https://www.youtube.com/results?search_query={clean_title.replace(' ', '+')}+official+trailer"
-        tmdb_url = f"https://www.themoviedb.org/movie/{int(selected_movie_info['tmdbId'])}" if not pd.isna(selected_movie_info['tmdbId']) else None
-        imdb_url = f"https://www.imdb.com/title/tt{int(selected_movie_info['imdbId']):07d}/" if not pd.isna(selected_movie_info['imdbId']) else None
+        
+        tmdb_id_val = selected_movie_info.get('tmdbId') if 'tmdbId' in selected_movie_info else None
+        tmdb_url = f"https://www.themoviedb.org/movie/{int(tmdb_id_val)}" if tmdb_id_val is not None and not pd.isna(tmdb_id_val) else None
+        
+        imdb_id_val = selected_movie_info.get('imdbId') if 'imdbId' in selected_movie_info else None
+        imdb_url = f"https://www.imdb.com/title/tt{int(imdb_id_val):07d}/" if imdb_id_val is not None and not pd.isna(imdb_id_val) else None
         
         buttons_html = f"""
         <div style='display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 1.5rem;'>
