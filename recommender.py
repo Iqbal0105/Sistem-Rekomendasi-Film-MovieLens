@@ -67,17 +67,20 @@ def load_movies():
     df['avg_rating'] = df['avg_rating'].fillna(0.0)
     df['num_ratings'] = df['num_ratings'].fillna(0).astype(int)
     
-    # Merge tmdbId from links.csv
+    # Merge imdbId and tmdbId from links.csv
     if os.path.exists(LINKS_PATH):
         try:
-            links_df = pd.read_csv(LINKS_PATH, usecols=["movieId", "tmdbId"])
+            links_df = pd.read_csv(LINKS_PATH, usecols=["movieId", "imdbId", "tmdbId"])
             links_df['tmdbId'] = links_df['tmdbId'].astype('Int64')
+            links_df['imdbId'] = links_df['imdbId'].astype('Int64')
             df = df.merge(links_df, on="movieId", how="left")
         except Exception as e:
             print(f"Error loading links.csv: {e}")
             df['tmdbId'] = pd.Series(dtype='Int64')
+            df['imdbId'] = pd.Series(dtype='Int64')
     else:
         df['tmdbId'] = pd.Series(dtype='Int64')
+        df['imdbId'] = pd.Series(dtype='Int64')
         
     return df
 
@@ -154,7 +157,7 @@ def recommend_by_content(movie_id, movies_df, tfidf_matrix, top_n=10):
     recs = movies_df.iloc[sim_indices].copy()
     recs['similarity'] = similarities[sim_indices]
     
-    return recs.head(top_n)[['movieId', 'title', 'genres', 'year', 'similarity', 'avg_rating', 'num_ratings', 'tmdbId']]
+    return recs.head(top_n)[['movieId', 'title', 'genres', 'year', 'similarity', 'avg_rating', 'num_ratings', 'tmdbId', 'imdbId']]
 
 def build_collaborative_model(min_movie_ratings=4000, min_user_ratings=300):
     """Reads ratings.csv, filters it, computes item similarity, and saves it."""
@@ -227,4 +230,4 @@ def recommend_by_collaborative(movie_id, item_sim_df, movies_df, top_n=10):
     # Sort by similarity again (since join might change order)
     recs = recs.sort_values(by='similarity', ascending=False)
     
-    return recs[['movieId', 'title', 'genres', 'year', 'similarity', 'avg_rating', 'num_ratings', 'tmdbId']]
+    return recs[['movieId', 'title', 'genres', 'year', 'similarity', 'avg_rating', 'num_ratings', 'tmdbId', 'imdbId']]

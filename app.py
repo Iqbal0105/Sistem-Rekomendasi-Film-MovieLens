@@ -6,6 +6,15 @@ import seaborn as sns
 import recommender
 from concurrent.futures import ThreadPoolExecutor
 
+# Parse URL query parameters
+query_params = st.query_params
+selected_movie_id_from_url = None
+if "movieId" in query_params:
+    try:
+        selected_movie_id_from_url = int(query_params["movieId"])
+    except (ValueError, TypeError):
+        pass
+
 # Set page configuration with a premium Netflix-like title and icon
 st.set_page_config(
     page_title="Movieflix AI - Sistem Rekomendasi Film",
@@ -286,6 +295,18 @@ st.markdown("""
         align-items: center;
         box-sizing: border-box;
     }
+    
+    /* Clickable Card Link Overrides */
+    a[target="_self"] {
+        text-decoration: none !important;
+        color: inherit !important;
+        display: block;
+        height: 100%;
+    }
+    a[target="_self"]:hover {
+        text-decoration: none !important;
+        color: inherit !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -355,21 +376,48 @@ else:
 # Setup selectbox for movie selection based on filtered list
 movie_titles = filtered_df['title'].tolist()
 movie_to_id = dict(zip(filtered_df['title'], filtered_df['movieId']))
+id_to_title = dict(zip(filtered_df['movieId'], filtered_df['title']))
+
+# Determine the selectbox index based on URL movie ID
+default_index = 0
+selectbox_key = f"movie_select_{selected_genre}"
+
+if selected_movie_id_from_url is not None:
+    if selected_movie_id_from_url in id_to_title:
+        target_title = id_to_title[selected_movie_id_from_url]
+        if target_title in movie_titles:
+            default_index = movie_titles.index(target_title) + 1
+    else:
+        st.session_state[selectbox_key] = "Semua"
 
 if len(movie_titles) > 0:
     options_list = ["Semua"] + movie_titles
     selected_title = st.sidebar.selectbox(
         "Cari judul film:",
         options=options_list,
-        index=0,
-        key=f"movie_select_{selected_genre}"
+        index=default_index,
+        key=selectbox_key
     )
     if selected_title == "Semua":
-        is_browse_mode = True
+        # If the selectbox is changed to "Semua" manually, clear URL params
+        if selected_movie_id_from_url is not None and selected_movie_id_from_url in id_to_title:
+            st.query_params.clear()
+            st.rerun()
+        # If there is a selected movie from URL but it's not in this genre filter, we still view it
+        if selected_movie_id_from_url is not None:
+            is_browse_mode = False
+            selected_movie_id = selected_movie_id_from_url
+            selected_movie_info = movies_df[movies_df['movieId'] == selected_movie_id].iloc[0]
+        else:
+            is_browse_mode = True
     else:
         is_browse_mode = False
         selected_movie_id = movie_to_id[selected_title]
         selected_movie_info = movies_df[movies_df['movieId'] == selected_movie_id].iloc[0]
+        # Sync URL if sidebar selection changed
+        if selected_movie_id_from_url != selected_movie_id:
+            st.query_params["movieId"] = str(selected_movie_id)
+            st.rerun()
 else:
     st.sidebar.warning("Tidak ada film di genre ini.")
     st.stop()
@@ -394,7 +442,17 @@ if not is_browse_mode:
     cf_status_text = "POPULER DI USER" if is_in_cf else "KLASIK/INDIE"
     selected_stars = "".join(["★" for _ in range(int(round(selected_movie_info['avg_rating'])))]) + "".join(["☆" for _ in range(5 - int(round(selected_movie_info['avg_rating'])))])
 
-    st.markdown("### 🎬 Film Terpilih")
+    # Add a beautiful back button if viewing detail via query parameters
+    col_back, _ = st.columns([1, 4])
+    with col_back:
+        if st.button("← Kembali ke Galeri", key="back_to_gallery", use_container_width=True):
+            st.query_params.clear()
+            for k in list(st.session_state.keys()):
+                if k.startswith("movie_select_"):
+                    st.session_state[k] = "Semua"
+            st.rerun()
+
+    st.markdown("### 🎬 Detail Film")
     col_hero_p, col_hero_d = st.columns([1, 4])
     with col_hero_p:
         st.markdown(f"""
@@ -406,6 +464,47 @@ if not is_browse_mode:
     with col_hero_d:
         selected_genres = selected_movie_info['genres'].split('|')
         genre_badges = "".join([f"<span class='genre-badge'>{g}</span>" for g in selected_genres])
+        
+        # Build watch and detail links
+        clean_title = selected_movie_info['title'].split(' (')[0]
+        google_watch_url = f"https://www.google.com/search?q=Nonton+{clean_title.replace(' ', '+')}+sub+Indo"
+        youtube_trailer_url = f"https://www.youtube.com/results?search_query={clean_title.replace(' ', '+')}+official+trailer"
+        tmdb_url = f"https://www.themoviedb.org/movie/{int(selected_movie_info['tmdbId'])}" if not pd.isna(selected_movie_info['tmdbId']) else None
+        imdb_url = f"https://www.imdb.com/title/tt{int(selected_movie_info['imdbId']):07d}/" if not pd.isna(selected_movie_info['imdbId']) else None
+        
+        buttons_html = f"""
+        <div style='display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 1.5rem;'>
+            <a href="{google_watch_url}" target="_blank" style="text-decoration: none;">
+                <button style="background-color: #E50914; color: white; border: none; padding: 0.6rem 1.2rem; font-size: 0.95rem; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background-color 0.2s;">
+                    🔴 Nonton Sekarang (Google)
+                </button>
+            </a>
+            <a href="{youtube_trailer_url}" target="_blank" style="text-decoration: none;">
+                <button style="background-color: #2f2f2f; color: white; border: 1px solid #444; padding: 0.6rem 1.2rem; font-size: 0.95rem; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background-color 0.2s;">
+                    📺 Trailer (YouTube)
+                </button>
+            </a>
+        """
+        
+        if tmdb_url:
+            buttons_html += f"""
+            <a href="{tmdb_url}" target="_blank" style="text-decoration: none;">
+                <button style="background-color: #0d253f; color: #01b4e4; border: 1px solid #01b4e4; padding: 0.6rem 1.2rem; font-size: 0.95rem; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background-color 0.2s;">
+                    🎬 Halaman TMDb
+                </button>
+            </a>
+            """
+            
+        if imdb_url:
+            buttons_html += f"""
+            <a href="{imdb_url}" target="_blank" style="text-decoration: none;">
+                <button style="background-color: #f5c518; color: black; border: none; padding: 0.6rem 1.2rem; font-size: 0.95rem; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background-color 0.2s;">
+                    ℹ️ Halaman IMDb
+                </button>
+            </a>
+            """
+            
+        buttons_html += "</div>"
         
         st.markdown(f"""
         <div class='hero-banner'>
@@ -422,6 +521,7 @@ if not is_browse_mode:
                 <span style='color: #999; font-size: 0.9rem; font-weight: bold; margin-right: 0.5rem;'>GENRE:</span>
                 {genre_badges}
             </div>
+            {buttons_html}
         </div>
         """, unsafe_allow_html=True)
 else:
@@ -460,24 +560,26 @@ with tab1:
                 
                 with col_target:
                     st.markdown(f"""
-                    <div class='movie-card'>
-                        <div class='movie-card-img-container'>
-                            <img class='movie-card-img' src='{poster_url}'>
-                        </div>
-                        <div class='movie-card-content'>
-                            <div class='card-title'>{row.title}</div>
-                            <div class='card-meta'>
-                                <span style='color: #E50914; font-weight: bold; font-size: 0.85rem;'>TRENDING</span>
-                                <span class='card-year'>{row.year if row.year > 0 else 'N/A'}</span>
+                    <a href='/?movieId={row.movieId}' target='_self' style='text-decoration: none; color: inherit;'>
+                        <div class='movie-card'>
+                            <div class='movie-card-img-container'>
+                                <img class='movie-card-img' src='{poster_url}'>
                             </div>
-                            <div class='card-rating-row'>
-                                {item_stars} <span style='color: #cbd5e1; font-weight: bold;'>{row.avg_rating:.1f}</span>
-                                <span style='color: #777; font-size: 0.75rem;'>({int(row.num_ratings):,})</span>
+                            <div class='movie-card-content'>
+                                <div class='card-title'>{row.title}</div>
+                                <div class='card-meta'>
+                                    <span style='color: #E50914; font-weight: bold; font-size: 0.85rem;'>TRENDING</span>
+                                    <span class='card-year'>{row.year if row.year > 0 else 'N/A'}</span>
+                                </div>
+                                <div class='card-rating-row'>
+                                    {item_stars} <span style='color: #cbd5e1; font-weight: bold;'>{row.avg_rating:.1f}</span>
+                                    <span style='color: #777; font-size: 0.75rem;'>({int(row.num_ratings):,})</span>
+                                </div>
+                                <div class='card-desc'>{description}</div>
+                                <div class='card-genres'>{genres_html}</div>
                             </div>
-                            <div class='card-desc'>{description}</div>
-                            <div class='card-genres'>{genres_html}</div>
                         </div>
-                    </div>
+                    </a>
                     """, unsafe_allow_html=True)
     else:
         st.markdown("<h3 style='margin-bottom: 0.2rem;'>Karena Anda Menonton " + selected_movie_info['title'] + "</h3>", unsafe_allow_html=True)
@@ -508,24 +610,26 @@ with tab1:
                 
                 with col_target:
                     st.markdown(f"""
-                    <div class='movie-card'>
-                        <div class='movie-card-img-container'>
-                            <img class='movie-card-img' src='{poster_url}'>
-                        </div>
-                        <div class='movie-card-content'>
-                            <div class='card-title'>{row.title}</div>
-                            <div class='card-meta'>
-                                <span class='card-match'>{match_pct}% Match</span>
-                                <span class='card-year'>{row.year if row.year > 0 else 'N/A'}</span>
+                    <a href='/?movieId={row.movieId}' target='_self' style='text-decoration: none; color: inherit;'>
+                        <div class='movie-card'>
+                            <div class='movie-card-img-container'>
+                                <img class='movie-card-img' src='{poster_url}'>
                             </div>
-                            <div class='card-rating-row'>
-                                {item_stars} <span style='color: #cbd5e1; font-weight: bold;'>{row.avg_rating:.1f}</span>
-                                <span style='color: #777; font-size: 0.75rem;'>({int(row.num_ratings):,})</span>
+                            <div class='movie-card-content'>
+                                <div class='card-title'>{row.title}</div>
+                                <div class='card-meta'>
+                                    <span class='card-match'>{match_pct}% Match</span>
+                                    <span class='card-year'>{row.year if row.year > 0 else 'N/A'}</span>
+                                </div>
+                                <div class='card-rating-row'>
+                                    {item_stars} <span style='color: #cbd5e1; font-weight: bold;'>{row.avg_rating:.1f}</span>
+                                    <span style='color: #777; font-size: 0.75rem;'>({int(row.num_ratings):,})</span>
+                                </div>
+                                <div class='card-desc'>{description}</div>
+                                <div class='card-genres'>{genres_html}</div>
                             </div>
-                            <div class='card-desc'>{description}</div>
-                            <div class='card-genres'>{genres_html}</div>
                         </div>
-                    </div>
+                    </a>
                     """, unsafe_allow_html=True)
 
 # ----------------- TAB 2: COLLABORATIVE FILTERING -----------------
@@ -555,24 +659,26 @@ with tab2:
                 
                 with col_target:
                     st.markdown(f"""
-                    <div class='movie-card'>
-                        <div class='movie-card-img-container'>
-                            <img class='movie-card-img' src='{poster_url}'>
-                        </div>
-                        <div class='movie-card-content'>
-                            <div class='card-title'>{row.title}</div>
-                            <div class='card-meta'>
-                                <span style='color: #46d369; font-weight: bold; font-size: 0.85rem;'>TRENDING GLOBAL</span>
-                                <span class='card-year'>{row.year if row.year > 0 else 'N/A'}</span>
+                    <a href='/?movieId={row.movieId}' target='_self' style='text-decoration: none; color: inherit;'>
+                        <div class='movie-card'>
+                            <div class='movie-card-img-container'>
+                                <img class='movie-card-img' src='{poster_url}'>
                             </div>
-                            <div class='card-rating-row'>
-                                {item_stars} <span style='color: #cbd5e1; font-weight: bold;'>{row.avg_rating:.1f}</span>
-                                <span style='color: #777; font-size: 0.75rem;'>({int(row.num_ratings):,})</span>
+                            <div class='movie-card-content'>
+                                <div class='card-title'>{row.title}</div>
+                                <div class='card-meta'>
+                                    <span style='color: #46d369; font-weight: bold; font-size: 0.85rem;'>TRENDING GLOBAL</span>
+                                    <span class='card-year'>{row.year if row.year > 0 else 'N/A'}</span>
+                                </div>
+                                <div class='card-rating-row'>
+                                    {item_stars} <span style='color: #cbd5e1; font-weight: bold;'>{row.avg_rating:.1f}</span>
+                                    <span style='color: #777; font-size: 0.75rem;'>({int(row.num_ratings):,})</span>
+                                </div>
+                                <div class='card-desc'>{description}</div>
+                                <div class='card-genres'>{genres_html}</div>
                             </div>
-                            <div class='card-desc'>{description}</div>
-                            <div class='card-genres'>{genres_html}</div>
                         </div>
-                    </div>
+                    </a>
                     """, unsafe_allow_html=True)
     else:
         st.markdown("<h3 style='margin-bottom: 0.2rem;'>Rekomendasi Lain yang Mungkin Anda Sukai</h3>", unsafe_allow_html=True)
@@ -609,24 +715,26 @@ with tab2:
                     
                     with col_target:
                         st.markdown(f"""
-                        <div class='movie-card'>
-                            <div class='movie-card-img-container'>
-                                <img class='movie-card-img' src='{poster_url}'>
-                            </div>
-                            <div class='movie-card-content'>
-                                <div class='card-title'>{row.title}</div>
-                                <div class='card-meta'>
-                                    <span class='card-match'>{match_pct}% Cocok</span>
-                                    <span class='card-year'>{row.year if row.year > 0 else 'N/A'}</span>
+                        <a href='/?movieId={row.movieId}' target='_self' style='text-decoration: none; color: inherit;'>
+                            <div class='movie-card'>
+                                <div class='movie-card-img-container'>
+                                    <img class='movie-card-img' src='{poster_url}'>
                                 </div>
-                                <div class='card-rating-row'>
-                                    {item_stars} <span style='color: #cbd5e1; font-weight: bold;'>{row.avg_rating:.1f}</span>
-                                    <span style='color: #777; font-size: 0.75rem;'>({int(row.num_ratings):,})</span>
+                                <div class='movie-card-content'>
+                                    <div class='card-title'>{row.title}</div>
+                                    <div class='card-meta'>
+                                        <span class='card-match'>{match_pct}% Cocok</span>
+                                        <span class='card-year'>{row.year if row.year > 0 else 'N/A'}</span>
+                                    </div>
+                                    <div class='card-rating-row'>
+                                        {item_stars} <span style='color: #cbd5e1; font-weight: bold;'>{row.avg_rating:.1f}</span>
+                                        <span style='color: #777; font-size: 0.75rem;'>({int(row.num_ratings):,})</span>
+                                    </div>
+                                    <div class='card-desc'>{description}</div>
+                                    <div class='card-genres'>{genres_html}</div>
                                 </div>
-                                <div class='card-desc'>{description}</div>
-                                <div class='card-genres'>{genres_html}</div>
                             </div>
-                        </div>
+                        </a>
                         """, unsafe_allow_html=True)
 
 # ----------------- TAB 3: STATS & INSIGHTS -----------------
